@@ -1,0 +1,8 @@
+langchain
+langchain-community
+langchain-openai
+python-dotenv
+pydantic
+tavily-python
+unstructured 
+	might need unstructured[pdf,docx,pptx,...]
