@@ -1,7 +1,14 @@
-llm file-summarizer agent using langchain
-
+llm file-summarizer agent using langchain  
+  
+  
+  
 llm provided by open router  
   1. openrouter/qwen/qwen3-coder:free  
+  2. openrouter/deepseek/deepseek-r1-distill-llama-70b:free  
+  3. openrouter/meta-llama/llama-3.2-3b-instruct:free
+
+
+### PROJECT LOGS ###
 
 0.1.1 >  
   - no agent / no tool
@@ -10,13 +17,15 @@ llm provided by open router
     - basic llm request using langchain llm.invoke()  
   - follow up questions  
     - whole conversation stored in list  
-    - list passed as input
+    - list passed as input  
+
 0.1.2 >  
   - 2-llm solution  
     - llama3.2 for wide context / text computing  
     - deepseek R1 for maths capacity  
   - issues :  
     - incremental %history% quickly saturate llm context capacity  
+
 0.1.3 >  
   - modified 2-llm architecture : now overseer llm + math/code dedicated llm  
   - implemented agent framework for follow-up questions  
@@ -26,5 +35,6 @@ llm provided by open router
       - agent-ify the process with additionnal tools if necessary   
     - Agent won't use its tool : might be prompt engineering issue  
     - /!\ Agent loop itself up when suggested to call tool : major issue  
-      - either overseer Agent or mathsubcontr Tool issue  
+      - either overseer Agent or mathsubcontr Tool issue >> #1 priority  
+
 
