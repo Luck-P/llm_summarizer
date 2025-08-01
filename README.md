@@ -1,14 +1,14 @@
-llm file-summarizer agent using langchain  
+# llm file-summarizer agent using langchain #   
   
   
-  
-llm provided by open router  
+### llm provided by open router ###  
+
   1. openrouter/qwen/qwen3-coder:free  
   2. openrouter/deepseek/deepseek-r1-distill-llama-70b:free  
   3. openrouter/meta-llama/llama-3.2-3b-instruct:free
 
 
-### PROJECT LOGS ###
+## PROJECT LOGS ##  
 
 0.1.1 >  
   - no agent / no tool
