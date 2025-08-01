@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os 
-import subprocess
+
 
 #langchain libraries
 
@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain.tools import Tool
 from langchain.agents import initialize_agent
 from langchain.agents.agent_types import AgentType 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 #tools
 from langchain.tools.tavily_search import TavilySearchResults
@@ -17,9 +17,7 @@ from unstructured.partition.auto import partition
 
 load_dotenv()
 
-print(f"checkup : \nOPENAI_API_KEY : {os.environ["OPENAI_API_KEY"]}\nTAVILY_API_KEY : {os.environ["TAVILY_API_KEY"]}");input("...type...")
-
-#querytl = TavilySearchResults()
+#print(f"checkup : \nOPENAI_API_KEY : {os.environ["OPENAI_API_KEY"]}\nTAVILY_API_KEY : {os.environ["TAVILY_API_KEY"]}");input("...type...")
 
 ###     MODELS      ###
 '''
@@ -44,25 +42,57 @@ llama32 = ChatOpenAI(
 dpskllama = ChatOpenAI(
     openai_api_base="https://openrouter.ai/api/v1",
     model_name="deepseek/deepseek-r1-distill-llama-70b:free"
-) #low latency (0.85) - decent throughput (52 t/s) - small context (8,192 tk) - good at maths  
+) #low latency (0.85) - decent throughput (52 t/s) - small context (8,192 tk) - (very) good at maths  
 
 ###     TOOLS       ###
+'''
+onlinesearch = TavilySearchResults() #unaligned / unmanaged
 
+ctrlbrowse= Tool.from_function(
+    name = "online searching tool",
+    description =("" \
+    "use this tool when an information "
+    )
+)
+
+work in progress > wrapper tool that completes TavilySearchResult() with proper name/description + implements user approval check 
+
+'''
 def docsummar(path):
     return '\n'.join(str(el) for el in partition(filename = path))[:4000]
     
-dosum = Tool(
+'''dosum = Tool(
     name="document summarizer",
     func = docsummar,
-    description = "retrieve the document's text - input should be the full file path provided by the user"
+    description = "retrieve the document's text - function input should be a full file path provided by the user"
 )
+        useless for now : document is passed raw to the llm 
+'''
+
+def mathexp(prompt) -> str: 
+    return dpskllama.invoke(prompt).content
+
+
+mathsubcontr = Tool(
+    name="task sub contractor",
+    func=mathexp,
+    description=(
+        "use this tool when encountering either complex math problem or code handling"
+        "it will call an llm subcontractor specialized in advanced maths and coding - consider it better for these tasks" 
+        "Narrow context capacity : 8000 / eight thousands words"
+        "keep the passed prompt barebone : explicit variable names, equations, minimal instructions"
+        "mathexp function expect a plain text input - redact the prompt as asked then pass it raw to the function"
+    )
+)
+    
 
 ###     AGENTS      ### 
 
-synt = initialize_agent(
+overseer = initialize_agent(
     llm = llama32,
-    agent = AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-    tools=[dosum]
+    agent = AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+    tools=[mathsubcontr],
+    verbose=True
 )
 
 ###     LOW FUNCTIONS       ###
@@ -85,15 +115,15 @@ if __name__=="__main__":
     print(docsummar(path))
     history=[SystemMessage(content=f"summarize the following document. Your output should consist in : a quick overview (type, theme) - a light resume breaking the main points down - a short conclusion ||| document : {docsummar(path)}")]
     res = llama32.invoke(history)
-    history.append(res)
+    #history.append(res) -> useless, the whole document is already in memory : cheap duplication 
     clstdout()
     print(res.content)
     fwup = input("\n'q' to quit > ")
     while(fwup!='q'):
+        res = overseer.run(input=fwup,chat_history=history)
         history.append(HumanMessage(content=fwup))
-        res = dpskllama.invoke(history)
-        #history.append(res); > too big prompt -> counterproductive, llm answer comes from document anyway
-        print(f'\n{res.content}')
+        history.append(AIMessage(res))
+        print(f'\n{res}')
         fwup = input("\n'q' to quit > ")
     print("over")
     clstdout()
