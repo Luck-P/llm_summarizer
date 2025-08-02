@@ -5,7 +5,8 @@
 
   1. openrouter/qwen/qwen3-coder:free  
   2. openrouter/deepseek/deepseek-r1-distill-llama-70b:free  
-  3. openrouter/meta-llama/llama-3.2-3b-instruct:free
+  3. openrouter/meta-llama/llama-3.2-3b-instruct:free  
+  4. openrouter/nousresearch/deephermes-3-llama-3-8b-preview:free
 
 
 ## PROJECT LOGS ##  
@@ -37,4 +38,11 @@
     - /!\ Agent loop itself up when suggested to call tool : major issue  
       - either overseer Agent or mathsubcontr Tool issue >> #1 priority  
 
-
+0.1.4 >  
+  - upgraded prompt engineering in 'mathsubcontr' Tool > the llm now can determine whether it should use the tool or not  
+  - replaced llm 3. with llm 4. : unforeseen 1-request-per-minute limit  
+  - llm now can use its tool properly + satisfying answers for now  
+  - issues :  
+    - AgentType.CONVERSATIONAL\_REACT\_DESCRIPTION force reasonning-heavy output  
+      - simple question crashes / triggers new prompt  
+    - ball-implemented try except architecture in loop -> should be tested

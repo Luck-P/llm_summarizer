@@ -44,6 +44,11 @@ dpskllama = ChatOpenAI(
     model_name="deepseek/deepseek-r1-distill-llama-70b:free"
 ) #low latency (0.85) - decent throughput (52 t/s) - small context (8,192 tk) - (very) good at maths  
 
+dphermes = ChatOpenAI(
+    openai_api_base="https://openrouter.ai/api/v1",
+    model_name="nousresearch/deephermes-3-llama-3-8b-preview:free"
+) #low latency (1.0s) - high throughput (286 t/s) - large context (131,000 tk) - long chains of thought + function calling capabilities  
+
 ###     TOOLS       ###
 '''
 onlinesearch = TavilySearchResults() #unaligned / unmanaged
@@ -69,19 +74,21 @@ def docsummar(path):
         useless for now : document is passed raw to the llm 
 '''
 
-def mathexp(prompt) -> str: 
+def mathexp(prompt: str) -> str: 
     return dpskllama.invoke(prompt).content
 
 
 mathsubcontr = Tool(
-    name="task sub contractor",
+    name="task-sub_contractor",
     func=mathexp,
     description=(
-        "use this tool when encountering either complex math problem or code handling"
-        "it will call an llm subcontractor specialized in advanced maths and coding - consider it better for these tasks" 
-        "Narrow context capacity : 8000 / eight thousands words"
-        "keep the passed prompt barebone : explicit variable names, equations, minimal instructions"
-        "mathexp function expect a plain text input - redact the prompt as asked then pass it raw to the function"
+        "this tool invoke a math and code dedicated llm"
+        "if you encounter any maths or code related question : you **do** use the tool"
+        "INPUT: a **raw python string** describing the task"
+        "IMPORTANT: to use the tool follow these steps"
+        "- identify the core problem. You must sort useful elements from the useless ones"
+        "- write **yourself** a concise prompt that phrases the problem you identified. You have to use minimal instructions, variable names and clear equations **only**"
+        "- once the prompt fully written, you must pass the prompt you wrote as the **only input**"
     )
 )
     
@@ -89,7 +96,7 @@ mathsubcontr = Tool(
 ###     AGENTS      ### 
 
 overseer = initialize_agent(
-    llm = llama32,
+    llm = dphermes,
     agent = AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
     tools=[mathsubcontr],
     verbose=True
@@ -120,10 +127,14 @@ if __name__=="__main__":
     print(res.content)
     fwup = input("\n'q' to quit > ")
     while(fwup!='q'):
-        res = overseer.run(input=fwup,chat_history=history)
-        history.append(HumanMessage(content=fwup))
-        history.append(AIMessage(res))
-        print(f'\n{res}')
+        try :
+            res = overseer.run(input=fwup,chat_history=history)
+        except:
+            print(f"\nagent / langchain failure :\n{Exception}")
+        else:
+            history.append(HumanMessage(content=fwup))
+            history.append(AIMessage(res))
+            print(f'\n{res}')
         fwup = input("\n'q' to quit > ")
     print("over")
     clstdout()
