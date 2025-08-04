@@ -13,6 +13,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 #tools
 from langchain.tools.tavily_search import TavilySearchResults
 from unstructured.partition.auto import partition
+#from langdetect import detect -> no use for variable format files 
 
 
 load_dotenv()
@@ -64,7 +65,7 @@ work in progress > wrapper tool that completes TavilySearchResult() with proper 
 
 '''
 def docsummar(path):
-    return '\n'.join(str(el) for el in partition(filename = path))[:4000]
+    return '\n'.join(str(el) for el in partition(filename = path))
     
 '''dosum = Tool(
     name="document summarizer",
@@ -84,10 +85,13 @@ mathsubcontr = Tool(
     description=(
         "this tool invoke a math and code dedicated llm"
         "if you encounter any maths or code related question : you **do** use the tool"
+        "before anything, identify if the question is either code **or** math related"
         "INPUT: a **raw python string** describing the task"
         "IMPORTANT: to use the tool follow these steps"
         "- identify the core problem. You must sort useful elements from the useless ones"
-        "- write **yourself** a concise prompt that phrases the problem you identified. You have to use minimal instructions, variable names and clear equations **only**"
+        "- write **yourself** a concise prompt that phrases the problem you identified."
+        "- IF: the problem is **math related**: You have to use minimal instructions, variable names and clear equations **only**"
+        "- IF: the problem is **code related**: You have to transmit effectively the user's question **plus** context : you must **find** the related chunk of code from the **document** and **add it to your prompt**"
         "- once the prompt fully written, you must pass the prompt you wrote as the **only input**"
     )
 )
@@ -98,6 +102,7 @@ mathsubcontr = Tool(
 overseer = initialize_agent(
     llm = dphermes,
     agent = AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+    handle_parsing_errors = True,
     tools=[mathsubcontr],
     verbose=True
 )
@@ -116,11 +121,17 @@ def clstdout():
     os.system('cls' if os.name=='nt' else 'clear')
 
 if __name__=="__main__":
+    clstdout()
     print("document summeriser")
     path = getpath()
-    print(path)
-    print(docsummar(path))
-    history=[SystemMessage(content=f"summarize the following document. Your output should consist in : a quick overview (type, theme) - a light resume breaking the main points down - a short conclusion ||| document : {docsummar(path)}")]
+    history=[SystemMessage(
+        content=(
+            "summarize the following document."
+            "Your output must be build as the following : "
+            "   - write a quick overview of what is the document about"
+            "   - identify and breakdown the **main themes** of the document" 
+            f"here is the document : \n{docsummar(path)}"
+        ))]
     res = llama32.invoke(history)
     #history.append(res) -> useless, the whole document is already in memory : cheap duplication 
     clstdout()
@@ -129,11 +140,11 @@ if __name__=="__main__":
     while(fwup!='q'):
         try :
             res = overseer.run(input=fwup,chat_history=history)
-        except:
-            print(f"\nagent / langchain failure :\n{Exception}")
+        except Exception as e:
+            print(f"\nagent / langchain failure :\n{e}")
         else:
             history.append(HumanMessage(content=fwup))
-            history.append(AIMessage(res))
+            history.append(AIMessage(content=res))
             print(f'\n{res}')
         fwup = input("\n'q' to quit > ")
     print("over")

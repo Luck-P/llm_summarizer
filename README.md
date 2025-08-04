@@ -46,3 +46,13 @@
     - AgentType.CONVERSATIONAL\_REACT\_DESCRIPTION force reasonning-heavy output  
       - simple question crashes / triggers new prompt  
     - ball-implemented try except architecture in loop -> should be tested
+
+0.1.5 >  
+  - updated prompt for document summary  
+  - 'try except' chunk tested > works / fallback message broken   
+  - 'handle\_parsing\_errors = True' added for llm answer malfunction  
+  - several clstdout() added for UI clarity/readability
+  - issues :  
+    - coding tool unstable -> tool calling random + prompt fumbling  
+      - /!\ llm get entangled in tool conversation : blatant hallucination + unending prompting rather than answer retrieval  
+      - prompt separation -> llm first prompt coding llm the question then prompt it code chunk 

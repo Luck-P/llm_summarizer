@@ -4,5 +4,5 @@ langchain-openai
 python-dotenv
 pydantic
 tavily-python
-unstructured 
-	might need unstructured[pdf,docx,pptx,...]
+unstructured[pdf,docx,pptx,xlsx] 
+	(possibility to add more file format if required)
