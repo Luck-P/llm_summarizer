@@ -56,3 +56,10 @@
     - coding tool unstable -> tool calling random + prompt fumbling  
       - /!\ llm get entangled in tool conversation : blatant hallucination + unending prompting rather than answer retrieval  
       - prompt separation -> llm first prompt coding llm the question then prompt it code chunk 
+
+1.0.0 >  
+  - works just fine with several compatible file formats  
+  - added scalable agent fallback list with in-program adaptation  
+  - added new llm as fallback (llm 5.) > less convenient yet could help  
+  - separated math\_sub\_contractor from code\_sub\_contractor  
+  - rewrote totally code tool description : now seems to work  

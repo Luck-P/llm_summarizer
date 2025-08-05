@@ -50,6 +50,11 @@ dphermes = ChatOpenAI(
     model_name="nousresearch/deephermes-3-llama-3-8b-preview:free"
 ) #low latency (1.0s) - high throughput (286 t/s) - large context (131,000 tk) - long chains of thought + function calling capabilities  
 
+moon = ChatOpenAI(
+    openai_api_base = "https://openrouter.ai/api/v1",
+    model_name="moonshotai/kimi-vl-a3b-thinking:free"
+) # latency 4.5s - throughput 50 t/s - context 131,000 tk - good at long context task / multimodal reasonning
+
 ###     TOOLS       ###
 '''
 onlinesearch = TavilySearchResults() #unaligned / unmanaged
@@ -78,24 +83,42 @@ def docsummar(path):
 def mathexp(prompt: str) -> str: 
     return dpskllama.invoke(prompt).content
 
+def codeexp(prompt:str) -> str:
+    return qwen1.invoke(prompt).content
 
 mathsubcontr = Tool(
-    name="task-sub_contractor",
+    name="math-task-sub_contractor",
     func=mathexp,
     description=(
-        "this tool invoke a math and code dedicated llm"
-        "if you encounter any maths or code related question : you **do** use the tool"
-        "before anything, identify if the question is either code **or** math related"
+        "this tool invoke a math dedicated llm"
+        "if you encounter any maths related question : you **do** use the tool"
         "INPUT: a **raw python string** describing the task"
         "IMPORTANT: to use the tool follow these steps"
         "- identify the core problem. You must sort useful elements from the useless ones"
         "- write **yourself** a concise prompt that phrases the problem you identified."
-        "- IF: the problem is **math related**: You have to use minimal instructions, variable names and clear equations **only**"
-        "- IF: the problem is **code related**: You have to transmit effectively the user's question **plus** context : you must **find** the related chunk of code from the **document** and **add it to your prompt**"
+        "- You have to use minimal instructions, variable names and clear equations **only**"
         "- once the prompt fully written, you must pass the prompt you wrote as the **only input**"
+        "finally, once you receive the tool's answer, proceed with the final response"
     )
 )
     
+codesubcontr = Tool(
+    name = "coding-task-sub_contractor",
+    func=codeexp,
+    description=(
+        "this tool invoke a code dedicated llm"
+        "always use this tool for any code related question"
+        "INPUT: a **raw string** containing the related code and the user's question"
+        "IMPORTANT: to use the tool, you must follow these steps"
+        "- identify the user's problem."
+        "- retrieve the relevant section of code from the document previously given"
+        "- write **yourself** a prompt that contain : "
+        "  1. the user's question"
+        "  2. the relevant code section"
+        "once the prompt fully written, you must pass the prompt you wrote as the **only input**"
+        "finally, once you receive the tool's answer, proceed with the final response"
+    )
+)
 
 ###     AGENTS      ### 
 
@@ -103,8 +126,16 @@ overseer = initialize_agent(
     llm = dphermes,
     agent = AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
     handle_parsing_errors = True,
-    tools=[mathsubcontr],
+    tools=[mathsubcontr,codesubcontr],
     verbose=True
+)
+
+ovsfallback = initialize_agent(
+    llm = moon,
+    agent = AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+    handle_parsing_errors = True,
+    tools = [mathsubcontr,codesubcontr],
+    verbose = True
 )
 
 ###     LOW FUNCTIONS       ###
@@ -121,6 +152,7 @@ def clstdout():
     os.system('cls' if os.name=='nt' else 'clear')
 
 if __name__=="__main__":
+    avlagents = [overseer,ovsfallback];cra = 0
     clstdout()
     print("document summeriser")
     path = getpath()
@@ -139,9 +171,11 @@ if __name__=="__main__":
     fwup = input("\n'q' to quit > ")
     while(fwup!='q'):
         try :
-            res = overseer.run(input=fwup,chat_history=history)
+            res = avlagents[cra].run(input=fwup,chat_history=history)
         except Exception as e:
-            print(f"\nagent / langchain failure :\n{e}")
+            print(f"\nagent {cra + 1} failed :\n{e}")
+            if input("switch to next model ? y/n : ")=='y':
+                cra+=1
         else:
             history.append(HumanMessage(content=fwup))
             history.append(AIMessage(content=res))
